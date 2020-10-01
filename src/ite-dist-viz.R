@@ -25,6 +25,11 @@ df.plot <- with(df,
                              ite_min_var, ite_max_var)
                 })
 
+
+# --- BEGIN PLOTS --------------------------------------------------------------
+
+png(here('output', date.time.append('ite-plot-matrix.png', suffix = F)),
+    width = 2400, height = 3200, res = 300)
 par(mfrow = c(3, 2))
 
 # --- TRUE ITE PLOTS -----------------------------------------------------------
@@ -70,4 +75,5 @@ with(df.plot, {
 with(df.plot, ite.dens(y0=y0_sort_incr, y1=y1_sort, xlim = range(df.plot$ite_max_var)))
 title(main = 'Density of estimated ITEs (max variance)')
 
+dev.off()
 
