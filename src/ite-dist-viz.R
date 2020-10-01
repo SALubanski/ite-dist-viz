@@ -1,60 +1,73 @@
-# --- OLD CODE ----------------------------------------------------------------
-df$y1_obs_rank <- rank(df$y1_obs, na.last = "keep")
-df$y0_obs_rank <- rank(df$y0_obs, na.last = "keep")
+library(here)
+source(here('src', 'ite-functions.R'))
 
+# --- GENERATE DATA ------------------------------------------------------------
 
-# get imputed y1s
+df <- dgm.fun(n = 100, y0.dist = 'chisq', ite.sd = 1, ate = 0.5)
 
-df$y0_imp <- apply(df, 1, function(x){
-  if(x['z'] == 0) x['y0_obs'] else sample(df$y0, 1)
+head(df)
+
+# treatment assignment & observed PO's ####
+df$y <- with(df, ifelse(z == 0, y0, y1))
+df$y1_obs <- with(df, ifelse(z == 0, NA, z)*y1)
+df$y0_obs <- with(df, ifelse(z == 1, NA, 1-z)*y0)
+
+# data.frame of plotting data (sorted PO's & estimated ITEs) ####
+df.plot <- with(df, 
+                {
+                  y1_sort <- sort(y1_obs, decreasing = T)
+                  y0_sort_decr <- sort(y0_obs, decreasing = T)
+                  y0_sort_incr <- sort(y0_obs, decreasing = F)
+                  ite_min_var <- y1_sort - y0_sort_decr
+                  ite_max_var <- y1_sort - y0_sort_incr
+                  
+                  data.frame(y1_sort, y0_sort_decr, y0_sort_incr,
+                             ite_min_var, ite_max_var)
+                })
+
+par(mfrow = c(3, 2))
+
+# --- TRUE ITE PLOTS -----------------------------------------------------------
+
+# Scatterplot of True Potential Outcomes
+with(df, ite.scatter(y0 = y0, y1 = y1))
+title(main = 'Scatterplot of True Potential Outcomes')
+mtext(paste('rho.true = ', round(cor(df$y1, df$y0), 3)))
+
+# Density of True ITEs w/shading below 0
+with(df, ite.dens(y0=y0, y1=y1, xlim = range(df.plot$ite_max_var)))
+title(main = 'Density of True ITEs')
+
+# --- ESTIMATED ITE PLOTS: *MINIMUM* VARIANCE ----------------------------------
+
+# Scatterplot of Sorted Potential Outcomes (min ITE variance)
+with(df.plot, {
+  
+  ite.scatter(y0=y0_sort_decr, y1=y1_sort)
+  title(main = 'Scatterplot of sorted Potential Outcomes (same direction)')
+  
+  rho.est <- round(cor(y1_sort, y0_sort_decr), 3)
+  mtext(paste('Estimated rho =', rho.est))
 })
 
+# Density of Sorted ITEs (min ITE variance)
+with(df.plot, ite.dens(y0=y0_sort_decr, y1=y1_sort, xlim = range(df.plot$ite_max_var)))
+title(main = 'Density of estimated ITEs (min variance)')
 
-# get imptued y0s
-df$y0_imp <- apply(df, 1, function(x){
-  if(x['z'] == 0) x['y0_obs'] else sample(df$y0, 1)
+# --- ESTIMATED ITE PLOTS: *MAXIMUM* VARIANCE ----------------------------------
+
+# Scatterplot of Sorted Potential Outcomes (min ITE variance)
+with(df.plot, {
+  
+  ite.scatter(y0=y0_sort_incr, y1=y1_sort)
+  title(main = 'Scatterplot of sorted Potential Outcomes (opposite direction)')
+  
+  rho.est <- round(cor(y0_sort_incr, y1_sort), 3)
+  mtext(paste('Estimated rho =', rho.est))
 })
 
+# Density of Sorted ITEs (min ITE variance)
+with(df.plot, ite.dens(y0=y0_sort_incr, y1=y1_sort, xlim = range(df.plot$ite_max_var)))
+title(main = 'Density of estimated ITEs (max variance)')
 
-# PO lookup by rank
-with(df, y1_obs[which(y1_obs_rank == 1)])
-
-rank.lookup <- function(dat = df, rank, rank.var, target.var)
-{
-  # browser()
-  rank.min <- min(dat[, rank.var], na.rm = T)
-  rank.max <- min(dat[, rank.var], na.rm = T)
-  stopifnot(rank >= rank.min | rank <= rank.max)
-  
-  rank_ind <- which(dat[, rank.var] == rank)
-  dat[rank_ind, target.var]
-  
-}
-
-rank.lookup(df, rank = 1, 'y1_obs_rank', 'y1_obs')
-
-sapply(df$y1_obs_rank, function(x){
-  if(is.na(x)) NA else{
-    rank.lookup(df, rank = x, 'y0_obs_rank', 'y0_obs')
-  }
-})
-
-# (in progress) get imputed y1s (y0 of same rank)
-apply(df, 1, function(x){
-  
-  # browser()
-  
-  if(x['z'] == 1)
-  {
-    x['y1_obs']
-  }
-  else
-  {
-    # sample(df$y1, 1)
-    rank_ind <- x['y0_obs_rank']
-    y1_ind <- which(df$y1_obs_rank == rank_ind)
-    df$y1_obs[y1_ind]
-  }
-  
-})
 
