@@ -1,5 +1,18 @@
 # --- FUNCTIONS ----------------------------------------------------------------
 
+date.time.append <- function(str, sep = '_', 
+                             date.format ="%Y-%m-%d_%H-%M-%S",
+                             suffix = T)
+{
+  stopifnot(is.character(str))
+  if(suffix == T){
+    return(paste(str, format(Sys.time(), date.format), sep = sep))
+  }
+  if(suffix == F){
+    return(paste(format(Sys.time(), date.format), str, sep = sep)) 
+  }
+}
+
 dgm.fun <- function(n, y0.dist = 'norm', ite.sd = 1, ate = 0.5)
 {
   # Data Generating Mechanism (DGM) function
